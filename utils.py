@@ -33,3 +33,17 @@ def print_slowly(text, delay=0.05):
             print(char, end='', flush=True)
             time.sleep(delay)
         print()
+
+def clean_filename(url):
+    """
+    Очищает URL-адрес от недопустимых символов для использования в именах файлов.
+
+    Аргументы:
+        url (str): URL-адрес для очистки.
+
+    Возвращает:
+        str: Очищенный URL-адрес.
+    """
+    # Удаляем все символы, которые не являются буквами, цифрами или подчеркиванием
+    cleaned_url = re.sub(r'[^a-zA-Z0-9_]', '_', url)
+    return cleaned_url
