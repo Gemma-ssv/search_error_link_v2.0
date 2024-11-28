@@ -1,8 +1,7 @@
 
-import time
+import asyncio
 import threading
 import re
-import openpyxl
 
 
 # Добавляем блокировку для синхронизации вывода в консоль
@@ -28,11 +27,10 @@ def print_slowly(text, delay=0.05):
         >>> print_slowly("Привет, мир!", delay=0.1)
         Привет, мир!
     """
-    with console_lock:
-        for char in text:
-            print(char, end='', flush=True)
-            time.sleep(delay)
-        print()
+    for char in text:
+        print(char, end='', flush=True)
+        asyncio.sleep(delay)
+    print()
 
 def clean_filename(url):
     """
@@ -59,53 +57,7 @@ def is_valid_url(url_input):
     """
     pass
 
-def print_choice(urls: set) -> set:
-    """
-    Выводит информацию о программе. Запрашивает у пользователя ссылки.
-
-    Аргументы:
-        urls (set): Получает пустой список, в который будут записаны ссылки.
-
-    Возвращает:
-        set: Возвращает список ссылок, которые ввёл пользователь.
-    """
-    example_text = (
-        "Программа предназначена для проверки ссылок в новостях в интернет-магазине.\n"
-        "Введите ссылку в формате - https://домен/путь/\n"
-        "Например - https://gemma.by/news/\n"
-        "После ввода нажмите - Enter.\n"
-    )
-    print_slowly(example_text)
-    
-    while True:
-        example_text = "Введите ссылку: "
-        print_slowly(example_text)
-        url_input = input().strip()
-
-        if is_valid_url(url_input):
-            urls.add(url_input)
-            while True:
-                choice_text = ("Выполнить поиск? Введите `да` или `нет`.\n"
-                               "Если `нет`, то можно будет добавить еще ссылку.\n")
-                print_slowly(choice_text)
-                next_input = input().lower().strip()
-
-                if next_input == 'да':
-                    answer_yes_text = "Дождитесь окончания выполнения программы.\n"
-                    print_slowly(answer_yes_text)
-                    return urls
-                elif next_input == 'нет':
-                    break
-                else:
-                    wrong_answer_text = "Неправильный ответ. Требуется ввести `да` или `нет`.\n"
-                    print_slowly(wrong_answer_text)
-                    continue
-        else:
-            wrong_link_text = "Вы ввели неправильный формат ссылки. Попробуйте еще раз.\n"
-            print_slowly(wrong_link_text)
-            continue
-        
-def animate_search(stop_event):
+async def animate_search(stop_event):
     """
     Анимирует процесс поиска, отображая вращающийся символ.
 
@@ -114,23 +66,36 @@ def animate_search(stop_event):
     пока не будет установлен `stop_event`.
 
     Аргументы:
-        stop_event (threading.Event): Событие, которое останавливает анимацию,
-            когда оно установлено.
+        stop_event (asyncio.Event): Событие для остановки анимации.
 
     Возвращает:
         None: Функция ничего не возвращает, она только отображает анимацию.
-
-    Пример:
-        stop_event = threading.Event()
-        animate_search(stop_event)
     """
+    symbols = ['|', '/', '-', '\\']
+    i = 0
     while not stop_event.is_set():
-        with console_lock:
-            print("\rВеду поиск - |", end='', flush=True)
-            time.sleep(0.5)
-            print("\rВеду поиск - /", end='', flush=True)
-            time.sleep(0.5)
-            print("\rВеду поиск - -", end='', flush=True)
-            time.sleep(0.5)
-            print("\rВеду поиск - \\", end='', flush=True)
-            time.sleep(0.5)
+        print(f"\rВеду поиск - {symbols[i]}", end='', flush=True)
+        await asyncio.sleep(0.5)
+        i = (i + 1) % len(symbols)
+    # Очистка строки после завершения анимации
+    print("\rВеду поиск - ", end='', flush=True)
+
+async def test(flag):    
+    stop_event = asyncio.Event()
+    # Запуск анимации в отдельном таске
+    animation_task = asyncio.create_task(animate_search(stop_event))
+    
+    if flag == False:
+        # Остановка анимации
+        stop_event.set()
+        # Ожидание завершения задачи анимации
+        await animation_task
+
+# Пример использования
+async def main():
+    await test(True)  # Запуск анимации
+    await asyncio.sleep(5)  # Имитация работы
+    await test(False)  # Остановка анимации
+
+# Запуск асинхронной функции main
+asyncio.run(main())
