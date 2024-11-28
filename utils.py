@@ -104,3 +104,33 @@ def print_choice(urls: set) -> set:
             wrong_link_text = "Вы ввели неправильный формат ссылки. Попробуйте еще раз.\n"
             print_slowly(wrong_link_text)
             continue
+        
+def animate_search(stop_event):
+    """
+    Анимирует процесс поиска, отображая вращающийся символ.
+
+    Эта функция создает анимацию, которая имитирует процесс поиска.
+    Она отображает вращающийся символ ("|", "/", "-", "\\") каждые полсекунды,
+    пока не будет установлен `stop_event`.
+
+    Аргументы:
+        stop_event (threading.Event): Событие, которое останавливает анимацию,
+            когда оно установлено.
+
+    Возвращает:
+        None: Функция ничего не возвращает, она только отображает анимацию.
+
+    Пример:
+        stop_event = threading.Event()
+        animate_search(stop_event)
+    """
+    while not stop_event.is_set():
+        with console_lock:
+            print("\rВеду поиск - |", end='', flush=True)
+            time.sleep(0.5)
+            print("\rВеду поиск - /", end='', flush=True)
+            time.sleep(0.5)
+            print("\rВеду поиск - -", end='', flush=True)
+            time.sleep(0.5)
+            print("\rВеду поиск - \\", end='', flush=True)
+            time.sleep(0.5)
