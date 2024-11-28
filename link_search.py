@@ -16,6 +16,7 @@ class LinkChecker:
         self.delay = delay
 
     async def check_link(self, session, url, base_url):
+        print("Начало проверки ссылки")
         if url in self.visited_links:
             return
         self.visited_links.add(url)
@@ -24,7 +25,9 @@ class LinkChecker:
             async with session.get(url) as response:
                 if response.status >= 400:
                     self.broken_links.append((url, response.status))
+                    print("Ошибка ссылки")
                 else:
+                    print("Всё ок")
                     self.working_links.append(url)
                     self.link_paths[url].append(base_url)
         except aiohttp.ClientError as e:
@@ -40,6 +43,7 @@ class LinkChecker:
         await asyncio.sleep(2)  # Пауза для загрузки страницы
 
         links = browser.find_elements(By.TAG_NAME, 'a')
+        print("Поиск ссылок")
         tasks = []
         for link in links:
             href = link.get_attribute('href')
@@ -60,14 +64,14 @@ class LinkChecker:
         for i, (link, error) in enumerate(self.broken_links, 1):
             try:
                 text = browser.find_element(By.XPATH, f"//a[@href='{link}']").text
-            except Exception as e:
-                text = "Текст не найден"
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                text = f"Текст не найден{e}"
             path = ' -> '.join(self.link_paths[link])
             ws.append([i, link, text, error, path])
-
+        print("Данные сохранены.")
         wb.save("broken_links.xlsx")
 
-    async def main(self):
+    async def start_cheks(self):
         start_url = input("Введите ссылку: ")
 
         async with aiohttp.ClientSession() as session:
@@ -78,8 +82,8 @@ class LinkChecker:
             try:
                 await self.process_page(session, browser, start_url, 1)
                 await self.save_to_excel(browser)
-            except Exception as e:
-                print(e)
+            except Exception as e:  # pylint: disable=broad-exception-caught
+                print("Ошибка:", e)
             finally:
-                await asyncio.sleep(5)
+                print("Конец проверки.")
                 browser.quit()

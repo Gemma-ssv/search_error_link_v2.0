@@ -91,11 +91,11 @@ async def test(flag):
         # Ожидание завершения задачи анимации
         await animation_task
 
-# Пример использования
-async def main():
-    await test(True)  # Запуск анимации
-    await asyncio.sleep(5)  # Имитация работы
-    await test(False)  # Остановка анимации
+# # Пример использования
+# async def main():
+#     await test(True)  # Запуск анимации
+#     await asyncio.sleep(5)  # Имитация работы
+#     await test(False)  # Остановка анимации
 
-# Запуск асинхронной функции main
-asyncio.run(main())
+# # Запуск асинхронной функции main
+# asyncio.run(main())
