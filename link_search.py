@@ -1,6 +1,7 @@
 import asyncio
 from collections import defaultdict
 
+import aiofiles
 import aiohttp
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -14,46 +15,61 @@ class LinkChecker:
         self.link_paths = defaultdict(list)
         self.max_depth = max_depth
         self.delay = delay
+        
+    async def set_logs(self, error: str) -> None:
+        """
+        Записывает информацию об ошибках в файл error_logs.txt.
 
+        Параметры:
+            error (str): Текст ошибки.
+        """
+        async with aiofiles.open('error_logs.txt', 'a', encoding='utf-8') as f:
+            await f.write(f"{error}\n")
+            
     async def check_link(self, session, url, base_url):
-        print("Начало проверки ссылки")
-        if url in self.visited_links:
-            return
-        self.visited_links.add(url)
-
         try:
-            async with session.get(url) as response:
-                if response.status >= 400:
-                    self.broken_links.append((url, response.status))
-                    print("Ошибка ссылки")
-                else:
-                    print("Всё ок")
-                    self.working_links.append(url)
-                    self.link_paths[url].append(base_url)
-        except aiohttp.ClientError as e:
-            self.broken_links.append((url, str(e)))
+            if url in self.visited_links:
+                return
+            self.visited_links.add(url)
 
-        await asyncio.sleep(self.delay)  # Задержка между запросами
+            try:
+                async with session.get(url) as response:
+                    if response.status >= 400:
+                        self.broken_links.append((url, response.status))
+                    else:
+                        self.working_links.append(url)
+                        self.link_paths[url].append(base_url)
+            except aiohttp.ClientError as e:
+                self.broken_links.append((url, str(e)))
+
+            await asyncio.sleep(self.delay)  # Задержка между запросами
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            text_error = f"Ошибка в функции check_link - {e}"
+            await self.set_logs(text_error)
+
 
     async def process_page(self, session, browser, url, depth):
-        if depth > self.max_depth:
-            return
+        try:
+            if depth > self.max_depth:
+                return
 
-        browser.get(url)
-        await asyncio.sleep(2)  # Пауза для загрузки страницы
+            browser.get(url)
+            await asyncio.sleep(2)  # Пауза для загрузки страницы
 
-        links = browser.find_elements(By.TAG_NAME, 'a')
-        print("Поиск ссылок")
-        tasks = []
-        for link in links:
-            href = link.get_attribute('href')
-            if href and href.startswith('http'):
-                tasks.append(self.check_link(session, href, url))
+            links = browser.find_elements(By.TAG_NAME, 'a')
+            tasks = []
+            for link in links:
+                href = link.get_attribute('href')
+                if href and href.startswith('http'):
+                    tasks.append(self.check_link(session, href, url))
 
-        await asyncio.gather(*tasks)
+            await asyncio.gather(*tasks)
 
-        for link in self.working_links:
-            await self.process_page(session, browser, link, depth + 1)
+            for link in self.working_links:
+                await self.process_page(session, browser, link, depth + 1)
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            text_error = f"Ошибка в функции process_page - {e}"
+            await self.set_logs(text_error)
 
     async def save_to_excel(self, browser):
         wb = Workbook()
@@ -65,7 +81,9 @@ class LinkChecker:
             try:
                 text = browser.find_element(By.XPATH, f"//a[@href='{link}']").text
             except Exception as e:  # pylint: disable=broad-exception-caught
-                text = f"Текст не найден{e}"
+                text = "Текст не найден"
+                text_error = f"Ошибка в функции save_to_excel - {e}"
+                await self.set_logs(text_error)
             path = ' -> '.join(self.link_paths[link])
             ws.append([i, link, text, error, path])
         print("Данные сохранены.")
@@ -83,7 +101,8 @@ class LinkChecker:
                 await self.process_page(session, browser, start_url, 1)
                 await self.save_to_excel(browser)
             except Exception as e:  # pylint: disable=broad-exception-caught
-                print("Ошибка:", e)
+                text_error = f"Ошибка в функции start_cheks - {e}"
+                await self.set_logs(text_error)
             finally:
                 print("Конец проверки.")
                 browser.quit()
