@@ -1,6 +1,7 @@
 import asyncio
-import aiohttp
 from collections import defaultdict
+
+import aiohttp
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from openpyxl import Workbook
