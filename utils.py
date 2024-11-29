@@ -75,27 +75,18 @@ async def animate_search(stop_event):
     i = 0
     while not stop_event.is_set():
         print(f"\rВеду поиск - {symbols[i]}", end='', flush=True)
-        await asyncio.sleep(0.5)
+        await asyncio.sleep(0.3)
         i = (i + 1) % len(symbols)
     # Очистка строки после завершения анимации
-    print("\rВеду поиск - ", end='', flush=True)
+    print("\r", end='', flush=True)
 
-async def test(flag):    
+async def start_animate_search(flag):
     stop_event = asyncio.Event()
     # Запуск анимации в отдельном таске
     animation_task = asyncio.create_task(animate_search(stop_event))
-    
-    if flag == False:
+
+    if flag is False:
         # Остановка анимации
         stop_event.set()
         # Ожидание завершения задачи анимации
         await animation_task
-
-# # Пример использования
-# async def main():
-#     await test(True)  # Запуск анимации
-#     await asyncio.sleep(5)  # Имитация работы
-#     await test(False)  # Остановка анимации
-
-# # Запуск асинхронной функции main
-# asyncio.run(main())
