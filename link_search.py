@@ -7,6 +7,8 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from openpyxl import Workbook
 
+from utils import start_animate_search
+
 class LinkChecker:
     def __init__(self, max_depth=1, delay=1):
         self.visited_links = set()
@@ -15,7 +17,7 @@ class LinkChecker:
         self.link_paths = defaultdict(list)
         self.max_depth = max_depth
         self.delay = delay
-        
+
     async def set_logs(self, error: str) -> None:
         """
         Записывает информацию об ошибках в файл error_logs.txt.
@@ -75,18 +77,16 @@ class LinkChecker:
         wb = Workbook()
         ws = wb.active
         ws.title = "Broken Links"
-        ws.append(["N", "Ссылка", "Текст", "Ошибка", "Путь"])
-
+        ws.append(["N п/п", "Ссылка", "Текст", "Ошибка", "Путь"])
         for i, (link, error) in enumerate(self.broken_links, 1):
             try:
-                text = browser.find_element(By.XPATH, f"//a[@href='{link}']").text
+                text = browser.find_element(By.TAG_NAME, 'a').text
             except Exception as e:  # pylint: disable=broad-exception-caught
                 text = "Текст не найден"
                 text_error = f"Ошибка в функции save_to_excel - {e}"
                 await self.set_logs(text_error)
             path = ' -> '.join(self.link_paths[link])
             ws.append([i, link, text, error, path])
-        print("Данные сохранены.")
         wb.save("broken_links.xlsx")
 
     async def start_cheks(self):
@@ -98,11 +98,14 @@ class LinkChecker:
             options.add_argument('--headless=new')
             browser = webdriver.Chrome(options=options)
             try:
+                await start_animate_search(True)
                 await self.process_page(session, browser, start_url, 1)
                 await self.save_to_excel(browser)
             except Exception as e:  # pylint: disable=broad-exception-caught
                 text_error = f"Ошибка в функции start_cheks - {e}"
                 await self.set_logs(text_error)
             finally:
+                await start_animate_search(False)
+                print("Данные сохранены.")
                 print("Конец проверки.")
                 browser.quit()
